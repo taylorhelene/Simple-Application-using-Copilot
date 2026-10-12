@@ -9,6 +9,33 @@ let score = 0;
 let timeLeft = 20;
 let timer = null;
 let active = false;
+let audioContext = null;
+
+function playClap() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+
+  audioContext ??= new AudioContext();
+  if (audioContext.state === 'suspended') audioContext.resume();
+
+  const duration = 0.12;
+  const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i += 1) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  }
+
+  const noise = audioContext.createBufferSource();
+  const filter = audioContext.createBiquadFilter();
+  const volume = audioContext.createGain();
+  noise.buffer = buffer;
+  filter.type = 'bandpass';
+  filter.frequency.value = 1500;
+  volume.gain.setValueAtTime(0.35, audioContext.currentTime);
+  volume.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+  noise.connect(filter).connect(volume).connect(audioContext.destination);
+  noise.start();
+}
 
 function randomBetween(min, max) {
   return Math.random() * (max - min) + min;
@@ -52,6 +79,7 @@ function startGame() {
 
 target.addEventListener('click', () => {
   if (!active) return;
+  playClap();
   score += 1;
   scoreEl.textContent = String(score);
   placeTarget();
